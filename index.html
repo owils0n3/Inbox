@@ -369,16 +369,6 @@
     auth.onAuthStateChanged(user => {
       if (user) {
         userId = user.uid;
-        
-        // Exibe o ID do utilizador numa barrinha no topo para facilidade no Atalho
-        let idBox = document.getElementById('debugUserId');
-        if(!idBox) {
-          idBox = document.createElement('div');
-          idBox.id = 'debugUserId';
-          idBox.style.cssText = "background: #FFE5E5; color: #D32F2F; padding: 10px 16px; font-size: 0.78rem; text-align: center; font-weight: 600; border-bottom: 0.5px solid rgba(0,0,0,0.08); word-break: break-all;";
-          document.body.prepend(idBox);
-        }
-        idBox.textContent = "USER ID ATIVO: " + userId;
 
         document.getElementById('loadingScreen').style.display = 'none';
         document.getElementById('appContent').style.display = 'block';
@@ -392,7 +382,12 @@
         tarefas = [];
         if (data) {
           Object.keys(data).forEach(key => {
-            tarefas.push({ id: key, ...data[key] });
+            let item = data[key];
+            // Se o timestamp vier inválido ou ausente, garante a data atual correta
+            if (!item.timestamp || isNaN(item.timestamp) || item.timestamp < 1000000000) {
+              item.timestamp = Date.now();
+            }
+            tarefas.push({ id: key, ...item });
           });
           tarefas.sort((a, b) => b.timestamp - a.timestamp);
         }
