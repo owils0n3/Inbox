@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Rocha Batista • Inbox Rápida</title>
+
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Inbox Rápida" />
+  <meta name="theme-color" content="#1C1C1E" />
+
+  <!-- Bibliotecas do Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      /* Estética inspirada no app de finanças (Modo Escuro / Sóbrio e Elegante) */
+      --bg-primary: #121214;
+      --bg-elevated: #1E1E22;
+      --bg-card: #26262B;
+      --bg-input: #1A1A1E;
+      
+      --primary: #2F80ED;
+      --primary-gradient: linear-gradient(135deg, #2F80ED 0%, #56CCF2 100%);
+      --primary-glow: rgba(47, 128, 237, 0.25);
+      
+      --success: #27AE60;
+      --success-bg: rgba(39, 174, 96, 0.15);
+      --danger: #EB5757;
+      --danger-bg: rgba(235, 87, 87, 0.15);
+      
+      --text-primary: #F2F2F7;
+      --text-secondary: #8E8E93;
+      --text-muted: #636366;
+      
+      --border-color: rgba(255, 255, 255, 0.08);
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    #loadingScreen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-primary);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+    }
+    
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(18, 18, 20, 0.85);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 0.5px solid var(--border-color);
+      padding: 16px 20px;
+    }
+
+    .app-shell {
+      max-width: 600px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text-primary);
+    }
+
+    .brand span {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--primary);
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Abas de Navegação */
+    .tabs-bar {
+      display: flex;
+      background: var(--bg-elevated);
+      border-radius: 99px;
+      padding: 3px;
+      border: 0.5px solid var(--border-color);
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      color: var(--text-secondary);
+      border: none;
+      padding: 8px;
+      border-radius: 99px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .tab-btn.active {
+      background: var(--primary-gradient);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    /* Lista de Tarefas */
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .task-card {
+      background: var(--bg-elevated);
+      border: 0.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: all 0.25s ease;
+    }
+
+    .task-card.completed {
+      opacity: 0.5;
+      background: rgba(38, 38, 43, 0.4);
+    }
+
+    .task-checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--text-secondary);
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .task-card.completed .task-checkbox {
+      background: var(--success);
+      border-color: var(--success);
+      color: #FFFFFF;
+    }
+
+    .task-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .task-text {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+
+    .task-card.completed .task-text {
+      text-decoration: line-through;
+      color: var(--text-secondary);
+    }
+
+    .task-time {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+
+    .task-delete {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      transition: color 0.2s;
+    }
+
+    .task-delete:hover {
+      color: var(--danger);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      border: 0.5px solid var(--border-color);
+      padding: 10px 20px;
+      border-radius: 99px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+      z-index: 300;
+      white-space: nowrap;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+  <div id="loadingScreen">
+    <div class="spinner"></div>
+    <p style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">Carregando sua Inbox...</p>
+  </div>
+
+  <div id="appContent" style="display: none;">
+    <header>
+      <div class="app-shell">
+        <div class="brand">
+          <span>Caixa de Entrada</span>
+          <h1>Inbox Rápida</h1>
+        </div>
+        <button class="task-delete" onclick="limparConcluidas()" title="Limpar Concluídas" style="font-size:0.8rem; background:var(--bg-elevated); padding:6px 12px; border-radius:8px; border:0.5px solid var(--border-color);">Limpar Feitas</button>
+      </div>
+    </header>
+
+    <div class="container">
+      <!-- Abas -->
+      <div class="tabs-bar">
+        <button id="tabAtivas" class="tab-btn active" onclick="mudarAba('ativas')">Pendentes (<span id="countAtivas">0</span>)</button>
+        <button id="tabConcluidas" class="tab-btn" onclick="mudarAba('concluidas')">Concluídas</button>
+      </div>
+
+      <!-- Lista -->
+      <div id="taskListContainer" class="task-list"></div>
+    </div>
+  </div>
+
+  <div id="toast">Salvo</div>
+
+  <script>
+    // Configuração do Firebase (mesmo projeto)
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7vdvBDk6k48AlRDQpdrhOxG212MovmrM",
+      authDomain: "rocha-batista.firebaseapp.com",
+      databaseURL: "https://rocha-batista-default-rtdb.firebaseio.com",
+      projectId: "rocha-batista",
+      storageBucket: "rocha-batista.firebasestorage.app",
+      messagingSenderId: "737568409775",
+      appId: "1:737568409775:web:41b6eefa0b18199886ac5a"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+    
+    const DEFAULT_EMAIL = "rochabatista@wilson.com";
+    const DEFAULT_PASS = "wrzt01";
+
+    let userId = null;
+    let tarefas = [];
+    let abaAtual = 'ativas'; // 'ativas' ou 'concluidas'
+
+    // Autenticação Invisível
+    auth.signInWithEmailAndPassword(DEFAULT_EMAIL, DEFAULT_PASS).catch(err => {
+      console.error("Erro no login automático:", err.message);
+      document.getElementById('loadingScreen').style.display = 'none';
+      document.getElementById('appContent').style.display = 'block';
+    });
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        userId = user.uid;
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('appContent').style.display = 'block';
+        ouvirTarefasFirebase();
+      }
+    });
+
+    function ouvirTarefasFirebase() {
+      db.ref('usuarios/' + userId + '/inbox').on('value', snapshot => {
+        const data = snapshot.val();
+        tarefas = [];
+        if (data) {
+          Object.keys(data).forEach(key => {
+            tarefas.push({ id: key, ...data[key] });
+          });
+          // Ordenar mais recentes primeiro
+          tarefas.sort((a, b) => b.timestamp - a.timestamp);
+        }
+        renderizarTarefas();
+      });
+    }
+
+    function mudarAba(aba) {
+      abaAtual = aba;
+      document.getElementById('tabAtivas').classList.toggle('active', aba === 'ativas');
+      document.getElementById('tabConcluidas').classList.toggle('active', aba === 'concluidas');
+      renderizarTarefas();
+    }
+
+    function alternarStatus(id) {
+      const tarefa = tarefas.find(t => t.id === id);
+      if (!tarefa) return;
+      const novoStatus = !tarefa.concluida;
+      
+      db.ref(`usuarios/${userId}/inbox/${id}`).update({
+        concluida: novoStatus,
+        completedAt: novoStatus ? Date.now() : null
+      });
+    }
+
+    function excluirTarefa(id) {
+      db.ref(`usuarios/${userId}/inbox/${id}`).remove();
+      mostrarToast('Tarefa removida');
+    }
+
+    function limparConcluidas() {
+      if (!confirm('Deseja excluir todas as tarefas concluídas?')) return;
+      const updates = {};
+      tarefas.filter(t => t.concluida).forEach(t => {
+        updates[t.id] = null;
+      });
+      db.ref(`usuarios/${userId}/inbox`).update(updates);
+      mostrarToast('Histórico limpo');
+    }
+
+    function renderizarTarefas() {
+      const container = document.getElementById('taskListContainer');
+      const filtradas = tarefas.filter(t => abaAtual === 'ativas' ? !t.concluida : t.concluida);
+      
+      const countAtivas = tarefas.filter(t => !t.concluida).length;
+      document.getElementById('countAtivas').textContent = countAtivas;
+
+      if (filtradas.length === 0) {
+        container.innerHTML = `<div class="empty-state">${abaAtual === 'ativas' ? 'Tudo limpo por aqui! Nenhuma pendência na Inbox.' : 'Nenhuma tarefa concluída no momento.'}</div>`;
+        return;
+      }
+
+      container.innerHTML = filtradas.map(t => {
+        const dataFmt = new Date(t.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        return `
+          <div class="task-card ${t.concluida ? 'completed' : ''}">
+            <button class="task-checkbox" onclick="alternarStatus('${t.id}')">
+              ${t.concluida ? '✓' : ''}
+            </button>
+            <div class="task-content">
+              <span class="task-text">${t.texto}</span>
+              <span class="task-time">${dataFmt}</span>
+            </div>
+            <button class="task-delete" onclick="excluirTarefa('${t.id}')" title="Excluir">✕</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    let toastT;
+    function mostrarToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      clearTimeout(toastT);
+      toastT = setTimeout(() => t.classList.remove('show'), 2500);
+    }
+  </script>
+</body>
+</html>
