@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Inbox Rápida" />
-  <meta name="theme-color" content="#1C1C1E" />
+  <meta name="theme-color" content="#121214" />
 
   <!-- Bibliotecas do Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
@@ -153,6 +153,41 @@
       box-shadow: 0 4px 12px var(--primary-glow);
     }
 
+    /* Input Rápido Manual (Opcional caso queira digitar direto no site) */
+    .quick-input-box {
+      display: flex;
+      gap: 10px;
+    }
+
+    .quick-input-box input {
+      flex: 1;
+      height: 44px;
+      background: var(--bg-elevated);
+      border: 0.5px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 0 14px;
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    .quick-input-box input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .quick-input-box button {
+      height: 44px;
+      padding: 0 18px;
+      background: var(--primary-gradient);
+      color: #FFFFFF;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
     /* Lista de Tarefas */
     .task-list {
       display: flex;
@@ -276,11 +311,17 @@
           <span>Caixa de Entrada</span>
           <h1>Inbox Rápida</h1>
         </div>
-        <button class="task-delete" onclick="limparConcluidas()" title="Limpar Concluídas" style="font-size:0.8rem; background:var(--bg-elevated); padding:6px 12px; border-radius:8px; border:0.5px solid var(--border-color);">Limpar Feitas</button>
+        <button class="task-delete" onclick="limparConcluidas()" title="Limpar Concluídas" style="font-size:0.8rem; background:var(--bg-elevated); padding:6px 12px; border-radius:8px; border:0.5px solid var(--border-color); color:var(--text-primary);">Limpar Feitas</button>
       </div>
     </header>
 
     <div class="container">
+      <!-- Input para adicionar direto no app se quiser -->
+      <div class="quick-input-box">
+        <input type="text" id="inputNovaTarefa" placeholder="Nova tarefa rápida..." onkeydown="if(event.key==='Enter') adicionarTarefaManual()" />
+        <button onclick="adicionarTarefaManual()">Adicionar</button>
+      </div>
+
       <!-- Abas -->
       <div class="tabs-bar">
         <button id="tabAtivas" class="tab-btn active" onclick="mudarAba('ativas')">Pendentes (<span id="countAtivas">0</span>)</button>
@@ -295,7 +336,6 @@
   <div id="toast">Salvo</div>
 
   <script>
-    // Configuração do Firebase (mesmo projeto)
     const firebaseConfig = {
       apiKey: "AIzaSyD7vdvBDk6k48AlRDQpdrhOxG212MovmrM",
       authDomain: "rocha-batista.firebaseapp.com",
@@ -315,9 +355,8 @@
 
     let userId = null;
     let tarefas = [];
-    let abaAtual = 'ativas'; // 'ativas' ou 'concluidas'
+    let abaAtual = 'ativas';
 
-    // Autenticação Invisível
     auth.signInWithEmailAndPassword(DEFAULT_EMAIL, DEFAULT_PASS).catch(err => {
       console.error("Erro no login automático:", err.message);
       document.getElementById('loadingScreen').style.display = 'none';
@@ -341,11 +380,25 @@
           Object.keys(data).forEach(key => {
             tarefas.push({ id: key, ...data[key] });
           });
-          // Ordenar mais recentes primeiro
           tarefas.sort((a, b) => b.timestamp - a.timestamp);
         }
         renderizarTarefas();
       });
+    }
+
+    function adicionarTarefaManual() {
+      const input = document.getElementById('inputNovaTarefa');
+      const texto = input.value.trim();
+      if (!texto || !userId) return;
+
+      db.ref(`usuarios/${userId}/inbox`).push({
+        texto: texto,
+        concluida: false,
+        timestamp: Date.now()
+      });
+
+      input.value = '';
+      mostrarToast('Adicionado à Inbox!');
     }
 
     function mudarAba(aba) {
