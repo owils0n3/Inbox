@@ -383,7 +383,10 @@
         if (data) {
           Object.keys(data).forEach(key => {
             let item = data[key];
-            // Mantém rigorosamente o timestamp original gravado no banco sem sobrescrever
+            // Se o timestamp não existir, atribui o momento atual uma única vez para evitar erro
+            if (!item.timestamp || isNaN(item.timestamp)) {
+              item.timestamp = Date.now();
+            }
             tarefas.push({ id: key, ...item });
           });
           tarefas.sort((a, b) => b.timestamp - a.timestamp);
@@ -397,7 +400,6 @@
       const texto = input.value.trim();
       if (!texto || !userId) return;
 
-      // Grava o timestamp exato do momento do clique
       db.ref(`usuarios/${userId}/inbox`).push({
         texto: texto,
         concluida: false,
@@ -454,7 +456,8 @@
       }
 
       container.innerHTML = filtradas.map(t => {
-        const dataFmt = new Date(t.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ', ' + new Date(t.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const timeVal = t.timestamp && !isNaN(t.timestamp) ? t.timestamp : Date.now();
+        const dataFmt = new Date(timeVal).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ', ' + new Date(timeVal).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         return `
           <div class="task-card ${t.concluida ? 'completed' : ''}">
             <button class="task-checkbox" onclick="alternarStatus('${t.id}')">
