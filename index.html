@@ -383,10 +383,15 @@
         if (data) {
           Object.keys(data).forEach(key => {
             let item = data[key];
-            // Se o timestamp não existir, atribui o momento atual uma única vez para evitar erro
+            
+            // SE A TAREFA VEIO SEM TIMESTAMP (ex: criada por automação externa), 
+            // corrige gravando o momento atual no banco de forma permanente para aquela tarefa
             if (!item.timestamp || isNaN(item.timestamp)) {
-              item.timestamp = Date.now();
+              const agora = Date.now();
+              db.ref(`usuarios/${userId}/inbox/${key}`).update({ timestamp: agora });
+              item.timestamp = agora;
             }
+
             tarefas.push({ id: key, ...item });
           });
           tarefas.sort((a, b) => b.timestamp - a.timestamp);
@@ -457,7 +462,7 @@
 
       container.innerHTML = filtradas.map(t => {
         const timeVal = t.timestamp && !isNaN(t.timestamp) ? t.timestamp : Date.now();
-        const dataFmt = new Date(timeVal).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ', ' + new Date(timeVal).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const dataFmt = new Date(timeVal).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ', ' + new Date(timeVal).toLocaleTimeString('pt-BR', { hour: '2-digit', minute:'2-digit' });
         return `
           <div class="task-card ${t.concluida ? 'completed' : ''}">
             <button class="task-checkbox" onclick="alternarStatus('${t.id}')">
