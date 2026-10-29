@@ -392,23 +392,22 @@
     function ouvirTarefasFirebase() {
       db.ref('usuarios/' + userId + '/inbox').on('value', snapshot => {
         const data = snapshot.val();
-        tarefas = [];
+        const listaTemp = [];
         if (data) {
           Object.keys(data).forEach(key => {
             let item = data[key];
             
             // Se veio do Atalho sem timestamp (ou com timestamp inválido antigo),
-            // extrai a data real exata diretamente do ID da tarefa e salva no banco
-            if (!item.timestamp || isNaN(item.timestamp) || item.timestamp < 1000000000000) {
-              const dataReal = extrairDataDoId(key);
-              item.timestamp = dataReal;
-              db.ref(`usuarios/${userId}/inbox/${key}`).update({ timestamp: dataReal });
-            }
+            // extrai a data real exata diretamente do ID da tarefa apenas na memória (sem gerar loop de update)
+            const timeReal = (!item.timestamp || isNaN(item.timestamp) || item.timestamp < 1000000000000)
+              ? extrairDataDoId(key)
+              : item.timestamp;
 
-            tarefas.push({ id: key, ...item });
+            listaTemp.push({ id: key, ...item, timestamp: timeReal });
           });
-          tarefas.sort((a, b) => b.timestamp - a.timestamp);
+          listaTemp.sort((a, b) => b.timestamp - a.timestamp);
         }
+        tarefas = listaTemp;
         renderizarTarefas();
       });
     }
